@@ -1,5 +1,4 @@
 import os
-import sys
 import importlib
 import psutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -28,10 +27,8 @@ def load_frame_processor_module(frame_processor: str) -> Any:
         for method_name in FRAME_PROCESSORS_INTERFACE:
             if not hasattr(frame_processor_module, method_name):
                 raise NotImplementedError
-    except ModuleNotFoundError:
-        sys.exit(f'Frame processor {frame_processor} not found.')
-    except NotImplementedError:
-        sys.exit(f'Frame processor {frame_processor} not implemented correctly.')
+    except (ImportError, NotImplementedError):
+        quit(f'Frame processor {frame_processor} crashed.')
     return frame_processor_module
 
 
@@ -49,7 +46,7 @@ def multi_process_frame(source_path: str, temp_frame_paths: List[str], process_f
     with ThreadPoolExecutor(max_workers=roop.globals.execution_threads) as executor:
         futures = []
         queue = create_queue(temp_frame_paths)
-        queue_per_future = max(len(temp_frame_paths) // roop.globals.execution_threads, 1)
+        queue_per_future = len(temp_frame_paths) // roop.globals.execution_threads
         while not queue.empty():
             future = executor.submit(process_frames, source_path, pick_queue(queue, queue_per_future), update)
             futures.append(future)
